@@ -68,9 +68,14 @@ jobs:
           mv release/macos/etrade-gl   release/etrade-gl-macos
           mv release/windows/etrade-gl.exe release/etrade-gl-windows.exe
 
+      - name: Generate tag
+        id: tag
+        run: echo "value=v$(date +'%Y.%m.%d')-${GITHUB_SHA::7}" >> $GITHUB_OUTPUT
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ steps.tag.outputs.value }}
           files: |
             release/etrade-gl-macos
             release/etrade-gl-windows.exe
