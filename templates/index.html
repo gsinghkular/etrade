@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>E*Trade — {{ sheet }}</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #f0f2f5;
+      color: #1a1a2e;
+      padding: 2rem;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      gap: 1.5rem;
+      margin-bottom: 1.5rem;
+      flex-wrap: wrap;
+    }
+
+    header h1 {
+      font-size: 1.6rem;
+      font-weight: 700;
+      color: #1a1a2e;
+    }
+
+    header p {
+      font-size: 0.875rem;
+      color: #6b7280;
+      margin-top: 0.25rem;
+    }
+
+    .btn-group {
+      margin-left: auto;
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .toggle-btn, .download-btn {
+      padding: 0.45rem 1rem;
+      border: 1.5px solid #1a1a2e;
+      border-radius: 8px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+    }
+    .toggle-btn {
+      background: #fff;
+      color: #1a1a2e;
+    }
+    .toggle-btn:hover {
+      background: #1a1a2e;
+      color: #fff;
+    }
+    .download-btn {
+      background: #1a1a2e;
+      color: #fff;
+    }
+    .download-btn:hover {
+      opacity: 0.85;
+    }
+
+    .table-wrapper {
+      overflow-x: auto;
+      border-radius: 12px;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+      background: #fff;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.8rem;
+      white-space: nowrap;
+    }
+
+    thead tr {
+      background: #1a1a2e;
+      color: #fff;
+    }
+
+    thead th {
+      padding: 0.75rem 1rem;
+      text-align: left;
+      font-weight: 600;
+      letter-spacing: 0.03em;
+    }
+
+    tbody tr {
+      border-bottom: 1px solid #f0f0f0;
+      transition: background 0.15s;
+    }
+
+    tbody tr:last-child { border-bottom: none; }
+
+    tbody tr:hover { background: #f7f9ff; }
+
+    tbody td {
+      padding: 0.65rem 1rem;
+      color: #374151;
+    }
+
+    .positive { color: #16a34a; font-weight: 600; }
+    .negative { color: #dc2626; font-weight: 600; }
+
+    .badge {
+      display: inline-block;
+      padding: 0.15rem 0.55rem;
+      border-radius: 999px;
+      font-size: 0.7rem;
+      font-weight: 600;
+    }
+    .badge-short { background: #fef3c7; color: #92400e; }
+    .badge-long  { background: #d1fae5; color: #065f46; }
+
+    .col-extra { display: none; }
+    .col-extra.visible { display: table-cell; }
+  </style>
+</head>
+<body>
+
+{% set default_cols = [
+  "Quantity",
+  "Date Acquired",
+  "FX Rate (Acquired)",
+  "ACB",
+  "ACB (CAD)",
+  "ACB Per Share",
+  "Date Sold",
+  "FX Rate (Sold)",
+  "Total Proceeds",
+  "Total Proceeds (CAD)",
+  "Proceeds Per Share",
+  "Adjusted Gain/Loss",
+  "Adjusted Gain/Loss (CAD)"
+] %}
+
+  <header>
+    <div>
+      <h1>E*Trade &mdash; {{ sheet }}</h1>
+      <p>{{ data | length }} row(s)</p>
+    </div>
+    <div class="btn-group">
+      <button class="toggle-btn" onclick="toggleColumns()">Show all columns</button>
+      <button class="download-btn" onclick="downloadCSV(false)">Download CSV</button>
+      <button class="download-btn" onclick="downloadCSV(true)">Download Full CSV</button>
+    </div>
+  </header>
+
+  <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr>
+          {% for col in headers %}
+            <th class="{{ '' if col in default_cols else 'col-extra' }}">{{ col if col else "" }}</th>
+          {% endfor %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in data %}
+          <tr>
+            {% for cell in row %}
+              {% set col = headers[loop.index0] %}
+              <td class="{{ '' if col in default_cols else 'col-extra' }}">
+                {% if cell is fx_rate %}
+                  {{ "{:.4f}".format(cell[0]) }}{% if cell[1] %} <span title="Fallback: no rate on this date" style="color:#9ca3af;font-size:0.75em">({{ cell[1] }})</span>{% endif %}
+                {% elif col and "Gain/Loss" in col and cell is not none %}
+                  <span class="{{ 'positive' if cell >= 0 else 'negative' }}">
+                    {{ "{:,.4f}".format(cell) if cell is number else cell }}
+                  </span>
+                {% elif col == "Capital Gains Status" and cell %}
+                  <span class="badge {{ 'badge-short' if 'Short' in cell else 'badge-long' }}">{{ cell }}</span>
+                {% elif cell is number %}
+                  {{ "{:,.4f}".format(cell) if (cell % 1 != 0) else "{:,.0f}".format(cell) }}
+                {% else %}
+                  {{ cell if cell is not none else "" }}
+                {% endif %}
+              </td>
+            {% endfor %}
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <script>
+    let expanded = false;
+
+    function toggleColumns() {
+      expanded = !expanded;
+      document.querySelectorAll(".col-extra").forEach(el => {
+        el.classList.toggle("visible", expanded);
+      });
+      document.querySelector(".toggle-btn").textContent =
+        expanded ? "Hide extra columns" : "Show all columns";
+    }
+
+    function downloadCSV(allColumns) {
+      const table = document.querySelector("table");
+      const rows = [...table.querySelectorAll("tr")];
+
+      // Determine which column indices to include based on header classes
+      const headerCells = [...rows[0].querySelectorAll("th")];
+      const includedIndices = headerCells
+        .map((th, i) => ({ i, extra: th.classList.contains("col-extra") }))
+        .filter(({ extra }) => allColumns || !extra)
+        .map(({ i }) => i);
+
+      const csv = rows.map(row => {
+        const cells = [...row.querySelectorAll("th, td")];
+        return includedIndices.map(i => {
+          const text = cells[i].textContent.trim().replace(/\s+/g, " ");
+          return /[,"\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+        }).join(",");
+      }).join("\n");
+
+      const blob = new Blob([csv], { type: "text/csv" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = allColumns ? "etrade-gl-full.csv" : "etrade-gl.csv";
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+  </script>
+</body>
+</html>

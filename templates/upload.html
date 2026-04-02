@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>E*Trade G&amp;L CAD Converter</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #f0f2f5;
+      color: #1a1a2e;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+    }
+
+    .card {
+      background: #fff;
+      border-radius: 16px;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+      padding: 2.5rem 3rem;
+      width: 100%;
+      max-width: 480px;
+    }
+
+    h1 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin-bottom: 0.4rem;
+    }
+
+    .subtitle {
+      font-size: 0.875rem;
+      color: #6b7280;
+      margin-bottom: 2rem;
+    }
+
+    .field {
+      margin-bottom: 1.25rem;
+    }
+
+    label {
+      display: block;
+      font-size: 0.8rem;
+      font-weight: 600;
+      margin-bottom: 0.4rem;
+      color: #374151;
+    }
+
+    .drop-zone {
+      border: 2px dashed #d1d5db;
+      border-radius: 10px;
+      padding: 1.25rem 1rem;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+      position: relative;
+    }
+
+    .drop-zone:hover,
+    .drop-zone.dragover {
+      border-color: #1a1a2e;
+      background: #f7f9ff;
+    }
+
+    .drop-zone input[type="file"] {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+      width: 100%;
+      height: 100%;
+    }
+
+    .drop-zone .icon {
+      font-size: 1.5rem;
+      margin-bottom: 0.3rem;
+    }
+
+    .drop-zone p {
+      font-size: 0.8rem;
+      color: #6b7280;
+    }
+
+    .drop-zone .filename {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: #1a1a2e;
+      margin-top: 0.25rem;
+    }
+
+    .error-banner {
+      background: #fef2f2;
+      border: 1px solid #fca5a5;
+      color: #b91c1c;
+      border-radius: 8px;
+      padding: 0.65rem 1rem;
+      font-size: 0.8rem;
+      margin-bottom: 1.25rem;
+    }
+
+    button[type="submit"] {
+      width: 100%;
+      padding: 0.7rem;
+      background: #1a1a2e;
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 0.5rem;
+      transition: opacity 0.15s;
+    }
+
+    button[type="submit"]:hover { opacity: 0.85; }
+    button[type="submit"]:disabled { opacity: 0.5; cursor: not-allowed; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>E*Trade G&amp;L CAD Converter</h1>
+    <p class="subtitle">Upload your spreadsheet and FX rates to get started.</p>
+
+    {% if error %}
+    <div class="error-banner">{{ error }}</div>
+    {% endif %}
+
+    <form method="post" action="/view" enctype="multipart/form-data" id="upload-form">
+      <div class="field">
+        <label for="excel_file">E*Trade Excel file (.xlsx)</label>
+        <div class="drop-zone" id="zone-excel">
+          <input type="file" name="excel_file" id="excel_file" accept=".xlsx" required />
+          <div class="icon">📊</div>
+          <p>Click or drag &amp; drop</p>
+          <div class="filename" id="name-excel"></div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="fx_file">FX Rates JSON file (.json)</label>
+        <div class="drop-zone" id="zone-fx">
+          <input type="file" name="fx_file" id="fx_file" accept=".json" required />
+          <div class="icon">💱</div>
+          <p>Click or drag &amp; drop</p>
+          <div class="filename" id="name-fx"></div>
+        </div>
+      </div>
+
+      <button type="submit" id="submit-btn">View G&amp;L Data</button>
+    </form>
+  </div>
+
+  <script>
+    function setupDropZone(inputId, nameId, zoneId) {
+      const input = document.getElementById(inputId);
+      const nameEl = document.getElementById(nameId);
+      const zone = document.getElementById(zoneId);
+
+      input.addEventListener("change", () => {
+        nameEl.textContent = input.files[0]?.name ?? "";
+      });
+      zone.addEventListener("dragover", e => { e.preventDefault(); zone.classList.add("dragover"); });
+      zone.addEventListener("dragleave", () => zone.classList.remove("dragover"));
+      zone.addEventListener("drop", e => {
+        e.preventDefault();
+        zone.classList.remove("dragover");
+        if (e.dataTransfer.files.length) {
+          input.files = e.dataTransfer.files;
+          nameEl.textContent = e.dataTransfer.files[0].name;
+        }
+      });
+    }
+
+    setupDropZone("excel_file", "name-excel", "zone-excel");
+    setupDropZone("fx_file", "name-fx", "zone-fx");
+
+    document.getElementById("upload-form").addEventListener("submit", () => {
+      document.getElementById("submit-btn").disabled = true;
+      document.getElementById("submit-btn").textContent = "Processing…";
+    });
+  </script>
+</body>
+</html>

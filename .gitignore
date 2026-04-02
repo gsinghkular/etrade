@@ -1,0 +1,8 @@
+venv/
+.DS_Store
+etrade.xlsx
+fx-rates.json
+__pycache__/*
+.cursor/*
+build/
+dist/
